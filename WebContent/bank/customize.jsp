@@ -32,15 +32,23 @@ IBM AltoroJ
 			String content = request.getParameter("content");
 			if (content != null && !content.equalsIgnoreCase("customize.jsp")){
 				// Prevent open redirect (CWE-601): only follow relative, in-app
-				// destinations. Absolute (http://, https://) and protocol-relative
-				// (//) URLs are rejected so untrusted input cannot redirect the
-				// user's browser to an external site.
-				boolean isRelativePath = !content.startsWith("http://")
-						&& !content.startsWith("https://")
-						&& !content.startsWith("//")
-						&& content.indexOf('\\') == -1;
+				// destinations. Any scheme-qualified URL is rejected regardless of
+				// case or slash count (http://, HTTP://, https:/x, http:x) by
+				// refusing a colon, plus protocol-relative (//) and backslash
+				// variants. Whitespace/control chars are rejected too because
+				// browsers strip them before resolving (e.g. "\thttp://evil.com").
+				String target = content.trim();
+				boolean isRelativePath = !target.isEmpty()
+						&& target.indexOf(':') == -1
+						&& target.indexOf('\\') == -1
+						&& !target.startsWith("//");
+				for (int i = 0; isRelativePath && i < target.length(); i++){
+					if (target.charAt(i) <= 0x20){
+						isRelativePath = false;
+					}
+				}
 				if (isRelativePath){
-					response.sendRedirect(content);
+					response.sendRedirect(target);
 				}
 			}
 		%>
