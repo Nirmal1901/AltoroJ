@@ -1,5 +1,6 @@
 <%@ page language="java" contentType="text/html; charset=ISO-8859-1"
     pageEncoding="ISO-8859-1"%>
+<%@ page import="com.ibm.security.appscan.altoromutual.util.ServletUtil" %>
 
 <%
 /**
@@ -31,8 +32,24 @@ IBM AltoroJ
 		<%
 			String content = request.getParameter("content");
 			if (content != null && !content.equalsIgnoreCase("customize.jsp")){
-				if (content.startsWith("http://") || content.startsWith("https://")){
-					response.sendRedirect(content);
+				// Prevent open redirect (CWE-601): only follow relative, in-app
+				// destinations. Any scheme-qualified URL is rejected regardless of
+				// case or slash count (http://, HTTP://, https:/x, http:x) by
+				// refusing a colon, plus protocol-relative (//) and backslash
+				// variants. Whitespace/control chars are rejected too because
+				// browsers strip them before resolving (e.g. "\thttp://evil.com").
+				String target = content.trim();
+				boolean isRelativePath = !target.isEmpty()
+						&& target.indexOf(':') == -1
+						&& target.indexOf('\\') == -1
+						&& !target.startsWith("//");
+				for (int i = 0; isRelativePath && i < target.length(); i++){
+					if (target.charAt(i) <= 0x20){
+						isRelativePath = false;
+					}
+				}
+				if (isRelativePath){
+					response.sendRedirect(target);
 				}
 			}
 		%>
@@ -41,7 +58,7 @@ IBM AltoroJ
 		
 		<form method="post">
 		  <p>
-		  Current Language: <%=(request.getParameter("lang")==null)?"":request.getParameter("lang")%>
+		  Current Language: <%=(request.getParameter("lang")==null)?"":ServletUtil.sanitizeWeb(request.getParameter("lang"))%>
 		  </p>
 		
 		  <p>
