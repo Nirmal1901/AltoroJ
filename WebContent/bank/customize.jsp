@@ -31,7 +31,15 @@ IBM AltoroJ
 		<%
 			String content = request.getParameter("content");
 			if (content != null && !content.equalsIgnoreCase("customize.jsp")){
-				if (content.startsWith("http://") || content.startsWith("https://")){
+				// Prevent open redirect (CWE-601): only follow relative, in-app
+				// destinations. Absolute (http://, https://) and protocol-relative
+				// (//) URLs are rejected so untrusted input cannot redirect the
+				// user's browser to an external site.
+				boolean isRelativePath = !content.startsWith("http://")
+						&& !content.startsWith("https://")
+						&& !content.startsWith("//")
+						&& content.indexOf('\\') == -1;
+				if (isRelativePath){
 					response.sendRedirect(content);
 				}
 			}
